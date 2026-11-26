@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+.preview
+.taste-skill
+.impeccable
+/Frames/
+next-env.d.ts
+*.log
