@@ -1,12 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
-const EMAIL = 'hello@ahanamehra.com';
-const mail = (subject: string, body: string) =>
-  `mailto:${EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-const BOOK = mail('Booking a first class', 'Hello Ahana,\n\nI would like to book a first class.\nWhat I am looking for (private, group, online or retreat):\nMy experience with yoga:\n\nThank you,\n');
+import { BASE, BOOK, FAQ, MORNINGS, OFFERS, SCHEDULE, bookFor, url } from './data';
+import Header from './components/Header';
+import Footer from './components/Footer';
 
 const STATEMENT =
   'I teach yoga for people who want to feel calmer, stronger and more at home in their own bodies, one slow breath at a time.';
@@ -16,40 +13,6 @@ const CHAPTERS = [
   { h: 'Arrive in your body', p: 'Every class begins standing still. Feel the feet, let the breath slow down, notice where you are.' },
   { h: 'Find your balance', p: 'Strength and softness in the same pose. We build both, slowly, so they stay with you.' },
   { h: 'Return with gratitude', p: 'Hands to the heart. Carry the calm off the mat and into the rest of your day.' },
-];
-
-const OFFERS = [
-  { name: 'Private sessions', line: 'One to one, built around you', desc: 'We start with how your body feels today and what you want to change: sleep, back pain, stress, strength. Every session is planned for you alone.', meta: [['Length', '75 minutes'], ['Where', 'Studio or your home'], ['Price', '₹3,500']], img: BASE + '/img/assist.webp', alt: 'A teacher gently guiding a student into triangle pose' },
-  { name: 'Small group mornings', line: 'Eight mats, slow and steady', desc: 'A calm hatha flow, breathwork and a long rest at the end. Small enough that Ahana knows your name and your knees.', meta: [['Length', '60 minutes'], ['When', 'Mon, Wed, Fri, 6:30 am'], ['Price', '₹900']], img: BASE + '/img/beach-group.webp', alt: 'A small group holding tree pose together on a misty beach' },
-  { name: 'Live online', line: 'The same class, wherever you are', desc: 'Join from your living room. Classes are live, not recorded, so Ahana can see you and cue you if your camera is on.', meta: [['Length', '60 minutes'], ['When', 'Tue and Thu, 7 pm IST'], ['Price', '₹600']], img: BASE + '/img/window-tree.webp', alt: 'A woman in tree pose beside a tall bright window at home' },
-  { name: 'Retreats', line: 'Seven mornings away from it all', desc: 'Two classes a day, long silences, swims, simple vegetarian food and early nights, with twelve guests.', meta: [['Length', '7 nights'], ['Next', '8 to 15 February 2027'], ['Price', 'from ₹78,000']], img: BASE + '/img/villa-pool.webp', alt: 'A quiet villa with a long pool among palm trees' },
-];
-
-const MORNINGS = [
-  { day: 'Mon 8 Feb', word: 'Arrive', line: 'Settle into your room and the garden. A gentle evening stretch.', img: BASE + '/img/villa-garden.webp', alt: 'A garden villa with a green pool and palms' },
-  { day: 'Tue 9 Feb', word: 'Breathe', line: 'Long, slow breathing practice before the sun is up.', img: BASE + '/img/curtains.webp', alt: 'A woman meditating between white curtains' },
-  { day: 'Wed 10 Feb', word: 'Root', line: 'Standing poses and steady feet on the mat.', img: BASE + '/img/mat.webp', alt: 'Bare feet and hands on a green yoga mat in soft light' },
-  { day: 'Thu 11 Feb', word: 'Open', line: 'Morning practice on the pavilion over the water.', img: BASE + '/img/water-deck.webp', alt: 'A group practising in an open pavilion above a river' },
-  { day: 'Fri 12 Feb', word: 'Balance', line: 'Strength and stillness, then a free afternoon.', img: BASE + '/img/garden-path.webp', alt: 'A woman stretching on a flowering garden path' },
-  { day: 'Sat 13 Feb', word: 'Rest', line: 'Yin, a swim and a long, slow afternoon.', img: BASE + '/img/pool-light.webp', alt: 'Sunlight and leaf shadows on clear pool water' },
-  { day: 'Sun 14 Feb', word: 'Nourish', line: 'A last sunrise class and breakfast together.', img: BASE + '/img/breakfast.webp', alt: 'Two bowls of porridge with fresh fruit' },
-];
-
-const SCHEDULE: [number, string, string, string, string][] = [
-  [1, 'Monday', '6:30 am', 'Morning hatha flow', 'Studio and online'],
-  [2, 'Tuesday', '7:00 pm', 'Yin and restore', 'Online'],
-  [3, 'Wednesday', '6:30 am', 'Morning hatha flow', 'Studio and online'],
-  [4, 'Thursday', '7:00 pm', 'Slow vinyasa', 'Online'],
-  [5, 'Friday', '6:30 am', 'Morning hatha flow', 'Studio and online'],
-  [6, 'Saturday', '8:00 am', 'Beginners’ course, four weeks', 'Studio'],
-];
-
-const FAQ = [
-  { q: 'I have never done yoga. Where do I start?', a: 'With a private session or the Saturday beginners’ course. You learn the basic poses and how to breathe through them, then join the morning classes when you feel ready.', img: BASE + '/img/pavilion.webp', alt: 'Mats and pale blue bolsters laid out in a bamboo pavilion' },
-  { q: 'Do I need to be flexible?', a: 'No. Flexibility is something yoga gives you, not something you need first. Every pose has a version that works for your body today.', img: BASE + '/img/studio-namaste.webp', alt: 'A smiling woman sitting cross-legged with palms together in a bright room' },
-  { q: 'What do I bring?', a: 'Comfortable clothes and water. Mats, blocks and blankets are at the studio; online, a towel and a cushion will do.', img: BASE + '/img/mat.webp', alt: 'A green yoga mat in soft daylight' },
-  { q: 'How do online classes work?', a: 'You receive a link an hour before. The class is live, not recorded, so Ahana can see you and offer cues if your camera is on.', img: BASE + '/img/window-tree.webp', alt: 'Practising at home beside a bright window' },
-  { q: 'Can I come if I am pregnant or injured?', a: 'Please write before your first class. Some poses change, some are skipped, and a private session first is often the kindest start.', img: BASE + '/img/curtains.webp', alt: 'A woman meditating quietly between white curtains' },
 ];
 
 export default function Home() {
@@ -459,16 +422,7 @@ export default function Home() {
 
   return (
     <>
-      <header className="nav">
-        <a href="#top" className="wordmark">Ahana Mehra</a>
-        <nav aria-label="Main">
-          <a href="#about">About</a>
-          <a href="#offers">Classes</a>
-          <a href="#retreat">Retreat</a>
-          <a href="#questions">Questions</a>
-        </nav>
-        <a href={BOOK} className="btn btn-sm">Book a class</a>
-      </header>
+      <Header />
 
       <main id="top">
         {/* 1. THE FILM */}
@@ -536,7 +490,7 @@ export default function Home() {
         <section id="offers" className="offers" aria-labelledby="offers-h">
           <div className="offers-head">
             <h2 id="offers-h" className="split">{words('Four ways to practise')}</h2>
-            <p>Start wherever suits you. Many students begin with one private session, then join the mornings.</p>
+            <p>Start wherever suits you. Many students begin with one private session, then join the mornings. <a className="tlink" href={url('/classes/')}>See every class and price</a></p>
           </div>
           <div className="offer-stack">
             {OFFERS.map((o, i) => (
@@ -551,7 +505,7 @@ export default function Home() {
                     <dl className="offer-meta">
                       {o.meta.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
                     </dl>
-                    <a className="btn" href={mail(`Booking: ${o.name}`, `Hello Ahana,\n\nI would like to book: ${o.name}.\n\n`)}>Book {o.name.toLowerCase()}</a>
+                    <a className="btn" href={bookFor(o.id)}>Book {o.name.toLowerCase()}</a>
                   </div>
                 </div>
               </article>
@@ -567,7 +521,8 @@ export default function Home() {
               <h2 id="retreat-h" className="split">{words('Seven mornings by the water')}</h2>
               <p className="lead">A retreat for twelve guests, 8 to 15 February 2027, at a lagoon in the Western Ghats.</p>
               <p>Shared rooms from ₹78,000, single rooms ₹96,000. All meals, classes and airport transfers included.</p>
-              <a className="btn" href={mail('Seven mornings retreat', 'Hello Ahana,\n\nI would like to reserve a place on the February retreat.\nShared or single room:\n\n')}>Reserve a place</a>
+              <a className="btn" href={bookFor('retreat')}>Reserve a place</a>
+              <p><a className="tlink" href={url('/retreat/')}>See the whole retreat</a></p>
             </div>
             {MORNINGS.map((m) => (
               <figure className="m-card" key={m.word}>
@@ -588,7 +543,7 @@ export default function Home() {
         <section id="schedule" className="schedule" aria-labelledby="sch-h">
           <div className="sch-text">
             <h2 id="sch-h" className="split">{words('This week')}</h2>
-            <p>All times are Indian Standard Time. Online classes are live, and the link arrives an hour before.</p>
+            <p>All times are Indian Standard Time. Online classes are live, and the link arrives an hour before. <a className="tlink" href={url('/classes/#week')}>Full timetable</a></p>
             <figure className="sch-photo"><img src={BASE + "/img/mudra.webp"} width={1600} height={2400} alt="A hand resting in a mudra on a knee, in soft white light" loading="lazy" /></figure>
           </div>
           <ul className="sch-list">
@@ -640,37 +595,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="foot">
-        <div className="foot-top">
-          <div className="foot-call">
-            <h2>Come breathe with me</h2>
-            <a className="btn btn-ink" href={BOOK}>Book a first class</a>
-          </div>
-          <div className="foot-col">
-            <h3>Explore</h3>
-            <nav aria-label="Footer"><a href="#about">About</a><a href="#offers">Classes</a><a href="#retreat">Retreat</a><a href="#questions">Questions</a></nav>
-          </div>
-          <div className="foot-col">
-            <h3>On the mat</h3>
-            <p>Mon, Wed, Fri at 6:30 am</p>
-            <p>Tue, Thu at 7:00 pm</p>
-            <p>Saturday at 8:00 am</p>
-          </div>
-          <div className="foot-col">
-            <h3>Write to me</h3>
-            <a className="foot-mail" href={mail('Hello', 'Hello Ahana,\n\n')}>{EMAIL}</a>
-            <p>A reply within a day</p>
-          </div>
-        </div>
-        <p className="foot-name" aria-label="Ahana Mehra">
-          {['Ahana', 'Mehra'].flatMap((w, i) => [i ? ' ' : null, <span className="fm" key={w} aria-hidden="true"><span className="fl">{w}</span></span>])}
-        </p>
-        <div className="foot-meta">
-          <p>© 2027 Ahana Mehra</p>
-          <p>One slow breath at a time</p>
-          <a href="#top" className="to-top">Back to the top <span aria-hidden="true" /></a>
-        </div>
-      </footer>
+      <Footer />
     </>
   );
 }
