@@ -73,6 +73,7 @@ export default function Home() {
     const ctx = canvas.getContext('2d', { alpha: false })!;
     let cur = 0, target = 0, drawn = -1, alive = true;
     let cleanup: (() => void) | undefined;
+    let navCheck: (() => void) | null = null;
 
     const size = () => {
       const d = Math.min(window.devicePixelRatio || 1, 1.6);
@@ -166,7 +167,13 @@ export default function Home() {
           else (el as HTMLElement).scrollIntoView();
         }),
       );
-      ScrollTrigger.create({ trigger: '#film', start: 'bottom 70px', end: 'max', onToggle: (s) => document.querySelector('.nav')?.classList.toggle('solid', s.isActive) });
+      // a plain scroll check, so the header can never be left see-through further down the page
+      navCheck = () => {
+        const film = document.querySelector<HTMLElement>('#film')!;
+        document.querySelector('.nav')?.classList.toggle('solid', window.scrollY >= (film.offsetHeight - window.innerHeight) * 0.85);
+      };
+      window.addEventListener('scroll', navCheck, { passive: true });
+      navCheck();
 
       // ---------- 1. the film: breathe in, three phases, breathe out ----------
       const stage = document.querySelector<HTMLElement>('.film-stage')!;
@@ -175,8 +182,8 @@ export default function Home() {
       const endClip = () => {
         const vw = window.innerWidth, vh = window.innerHeight;
         return mobile
-          ? `inset(${vh * 0.12}px ${vw * 0.04}px ${vh * 0.3}px ${vw * 0.04}px round 28px 28px 28px 28px)`
-          : `inset(${vh * 0.09}px ${vw * 0.09}px ${vh * 0.13}px ${vw * 0.09}px round 36px 36px 36px 36px)`;
+          ? `inset(${Math.max(vh * 0.12, 90)}px ${vw * 0.04}px ${vh * 0.3}px ${vw * 0.04}px round 28px 28px 28px 28px)`
+          : `inset(${Math.max(vh * 0.12, 100)}px ${vw * 0.09}px ${vh * 0.1}px ${vw * 0.09}px round 36px 36px 36px 36px)`;
       };
       const win = document.querySelector<HTMLElement>('.window')!;
       const nameEl = document.querySelector<HTMLElement>('.film-name')!;
@@ -215,6 +222,7 @@ export default function Home() {
       };
       gsap.set(win, { clipPath: fullClip });
       layout(true);
+      document.fonts?.load('100px Playball').finally(() => layout(true));
       document.fonts?.ready.then(() => layout(true));
       window.addEventListener('resize', () => layout());
       // mist clears off the scene as the page arrives; it runs on the frame around the film,
@@ -251,9 +259,9 @@ export default function Home() {
           return;
         }
         tl.set(ch, { opacity: 1 }, at[i])
-          .fromTo(words, { yPercent: 135 }, { yPercent: 0, duration: 5, stagger: 0.7, ease: 'power3.out' }, at[i])
+          .fromTo(words, { yPercent: 175 }, { yPercent: 0, duration: 5, stagger: 0.7, ease: 'power3.out' }, at[i])
           .fromTo(para, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 4, ease: 'power2.out' }, at[i] + 3)
-          .to(words, { yPercent: -135, duration: 4, stagger: 0.4, ease: 'power2.in' }, at[i] + 15)
+          .to(words, { yPercent: -175, duration: 4, stagger: 0.4, ease: 'power2.in' }, at[i] + 15)
           .to(para, { opacity: 0, y: -14, duration: 3 }, at[i] + 15)
           .set(ch, { opacity: 0 }, at[i] + 20);
       });
@@ -269,13 +277,29 @@ export default function Home() {
         const stl = gsap.timeline({
           defaults: { ease: 'none' },
           scrollTrigger: {
-            trigger: '.statement-sec', start: 'top top', end: () => '+=' + window.innerHeight * 1.3,
+            trigger: '.statement-sec', start: 'top top', end: () => '+=' + window.innerHeight * 2.2,
             scrub: 1, pin: true, anticipatePin: 1, invalidateOnRefresh: true,
           },
         });
-        stl.fromTo('.st-orb', { scale: 0.6 }, { scale: 1, duration: 2 }, 0)
-          .fromTo('.statement .w', { opacity: 0.15 }, { opacity: 1, duration: 0.5, stagger: 0.22 }, 0.2)
-          .to({}, { duration: 1 });
+        // the circle opens out to the whole screen, the light dims a little, and the words come up in white over it
+        const orb = document.querySelector<HTMLElement>('.st-orb')!;
+        const sec = orb.parentElement!;
+        const d = () => Math.min(window.innerHeight * (mobile ? 0.4 : 0.5), window.innerWidth * 0.8);
+        const top = () => 74 + window.innerHeight * 0.025;
+        const mid = () => top() + d() / 2;
+        const full = () => Math.max(sec.clientWidth, sec.clientHeight / 1.5);
+        stl.fromTo(orb,
+          { clipPath: () => `circle(${d() / 2}px at ${sec.clientWidth / 2}px ${mid()}px)` },
+          { clipPath: () => `circle(${Math.hypot(sec.clientWidth, sec.clientHeight)}px at ${sec.clientWidth / 2}px ${sec.clientHeight / 2}px)`, duration: 2, ease: 'power2.in' }, 0)
+          .fromTo('.st-orb img',
+            { width: d, left: () => (sec.clientWidth - d()) / 2, top: () => mid() - d() * 1.5 * 0.57 },
+            { width: full, left: () => (sec.clientWidth - full()) / 2, top: () => -(full() * 1.5 - sec.clientHeight) * 0.42, duration: 2, ease: 'power2.inOut' }, 0)
+          .fromTo('.st-shade', { opacity: 0 }, { opacity: 1, duration: 1.2 }, 0.8)
+          // the words travel to the foot of the picture so her face stays clear
+          .fromTo('.statement', { y: 0 }, { y: () => { const el = document.querySelector<HTMLElement>('.statement')!; const sec = el.parentElement!; return Math.max(0, sec.clientHeight - el.offsetTop - el.offsetHeight - sec.clientHeight * 0.07); }, duration: 1.6, ease: 'power2.inOut' }, 0.2)
+          .fromTo('.statement', { color: '#241a14' }, { color: '#ffffff', duration: 1 }, 0.9)
+          .fromTo('.statement .w', { opacity: 0.18 }, { opacity: 1, duration: 0.5, stagger: 0.2 }, 1.8)
+          .to({}, { duration: 1.2 });
       }
 
       // ---------- 3. about: blinds lift off the portrait, numbers count up ----------
@@ -350,14 +374,13 @@ export default function Home() {
       });
 
       // ---------- 9. footer: the name rises out of the ground ----------
-      gsap.from('.foot-name .fl', { yPercent: 100, duration: 1.4, ease: 'expo.out', stagger: 0.04, scrollTrigger: { trigger: '.foot', start: 'top 70%', once: true } });
+      gsap.from('.foot-name .fl', { yPercent: 105, duration: 1.5, ease: 'expo.out', scrollTrigger: { trigger: '.foot', start: 'top 92%', once: true } });
 
       // ---------- entrances for every section ----------
       if (!reduced) {
         const once = (trigger: string | Element, start = 'top 78%') => ({ trigger, start, once: true });
 
         // statement: the circle settles in
-        gsap.from('.st-orb', { opacity: 0, rotate: -14, y: 30, duration: 1.4, ease: 'expo.out', scrollTrigger: once('.statement-sec', 'top 80%') });
 
         // about: the four figures rise one by one
         gsap.from('.stats > div', { y: 40, opacity: 0, duration: 1.1, ease: 'expo.out', stagger: 0.1, scrollTrigger: once('.stats', 'top 88%') });
@@ -387,8 +410,8 @@ export default function Home() {
         gsap.fromTo('.sch-photo', { clipPath: 'inset(0% 100% 0% 0% round 20px)' }, { clipPath: 'inset(0% 0% 0% 0% round 20px)', duration: 1.6, ease: 'expo.inOut', delay: 0.2, scrollTrigger: once('.schedule', 'top 75%') });
 
         // footer: the details rise before the name
-        gsap.from('.foot-top > *', { y: 24, opacity: 0, duration: 1.1, ease: 'expo.out', stagger: 0.08, scrollTrigger: once('.foot', 'top 80%') });
-        gsap.from('.foot-meta > *', { y: 20, opacity: 0, duration: 1.1, ease: 'expo.out', stagger: 0.08, delay: 0.5, scrollTrigger: once('.foot', 'top 70%') });
+        gsap.from('.foot-top', { y: 24, opacity: 0, duration: 1.1, ease: 'expo.out', stagger: 0.08, scrollTrigger: once('.foot', 'top 96%') });
+        gsap.from('.foot-meta', { y: 20, opacity: 0, duration: 1.1, ease: 'expo.out', stagger: 0.08, delay: 0.3, scrollTrigger: once('.foot', 'top 92%') });
       }
 
       // dividers draw outward from their centre as they arrive
@@ -401,12 +424,12 @@ export default function Home() {
 
       // section headings: each word slides up through its own mask
       gsap.utils.toArray<HTMLElement>('.split').forEach((h) => {
-        gsap.from(h.querySelectorAll('.cw > span'), { yPercent: 110, duration: 1.1, ease: 'expo.out', stagger: 0.06, scrollTrigger: { trigger: h, start: 'top 85%', once: true } });
+        gsap.from(h.querySelectorAll('.cw > span'), { yPercent: 160, duration: 1.1, ease: 'expo.out', stagger: 0.06, scrollTrigger: { trigger: h, start: 'top 85%', once: true } });
       });
 
       if (!reduced) {
         gsap.from('.film-name .nl', { yPercent: 115, duration: 1.1, ease: 'expo.out', stagger: 0.035, delay: 0.35 });
-        gsap.from('.film-lead, .film-foot > *', { y: 22, opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.08, delay: 0.7 });
+        gsap.from('.film-lead, .film-foot', { y: 22, opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.08, delay: 0.7 });
         if (!mobile && window.matchMedia('(hover: hover)').matches) {
           const cx = gsap.quickTo('.film-canvas', 'x', { duration: 1.8, ease: 'power3.out' });
           const lx = gsap.quickTo('.film-name', 'x', { duration: 1.6, ease: 'power3.out' });
@@ -427,6 +450,7 @@ export default function Home() {
       cancelAnimationFrame(raf);
       clearTimeout(failsafe);
       window.removeEventListener('resize', size);
+      if (navCheck) window.removeEventListener('scroll', navCheck);
       cleanup?.();
     };
   }, []);
@@ -457,8 +481,8 @@ export default function Home() {
             <div className="hero-shade" aria-hidden="true" />
             <div className="top-veil" aria-hidden="true" />
             <h1 id="film-h" className="film-name">
-              <span className="name-l" aria-label="Ahana ">{'Ahana'.split('').map((c, i) => <span className="nm" key={i} aria-hidden="true"><span className="nl">{c}</span></span>)}</span>
-              <span className="name-r" aria-label="Mehra">{'Mehra'.split('').map((c, i) => <span className="nm" key={i} aria-hidden="true"><span className="nl">{c}</span></span>)}</span>
+              <span className="name-l"><span className="nm"><span className="nl">Ahana</span></span> </span>
+              <span className="name-r"><span className="nm"><span className="nl">Mehra</span></span></span>
             </h1>
             <p className="film-lead">Yoga teacher for calm, strong mornings. Private, online and on retreat.</p>
             <div className="film-foot">
@@ -482,6 +506,7 @@ export default function Home() {
         <div className="divider" aria-hidden="true"><span className="dl" /><span className="dd" /><span className="dl" /></div>
         <section className="statement-sec" aria-labelledby="st-h">
           <div className="st-orb" aria-hidden="true"><img src={BASE + "/img/studio-namaste.webp"} alt="" /></div>
+          <div className="st-shade" aria-hidden="true" />
           <h2 id="st-h" className="visually-hidden">How Ahana teaches</h2>
           <p className="statement">{STATEMENT.split(' ').map((w, i) => <span className="w" key={i}>{w} </span>)}</p>
         </section>
@@ -604,7 +629,7 @@ export default function Home() {
         <section className="close" aria-labelledby="close-h">
           <div className="close-text">
             <h2 id="close-h" className="close-h" aria-label="Begin with one breath">
-              {'Begin with one breath'.split('').map((c, i) => <span className="cm" key={i} aria-hidden="true"><span className="ch">{c === ' ' ? ' ' : c}</span></span>)}
+              {['Begin', 'with', 'one', 'breath'].flatMap((w, i) => [i ? ' ' : null, <span className="cm" key={w} aria-hidden="true"><span className="ch">{w}</span></span>])}
             </h2>
             <p className="fade">Write to Ahana with what you are looking for. She replies within a day.</p>
             <a className="btn fade" href={BOOK}>Book a first class</a>
@@ -617,17 +642,33 @@ export default function Home() {
 
       <footer className="foot">
         <div className="foot-top">
-          <p>Private sessions, small group mornings, live online classes and retreats.</p>
-          <a className="foot-mail" href={mail('Hello', 'Hello Ahana,\n\n')}>{EMAIL}</a>
-          <a href="#top" className="tlink">Back to the top</a>
+          <div className="foot-call">
+            <h2>Come breathe with me</h2>
+            <a className="btn btn-ink" href={BOOK}>Book a first class</a>
+          </div>
+          <div className="foot-col">
+            <h3>Explore</h3>
+            <nav aria-label="Footer"><a href="#about">About</a><a href="#offers">Classes</a><a href="#retreat">Retreat</a><a href="#questions">Questions</a></nav>
+          </div>
+          <div className="foot-col">
+            <h3>On the mat</h3>
+            <p>Mon, Wed, Fri at 6:30 am</p>
+            <p>Tue, Thu at 7:00 pm</p>
+            <p>Saturday at 8:00 am</p>
+          </div>
+          <div className="foot-col">
+            <h3>Write to me</h3>
+            <a className="foot-mail" href={mail('Hello', 'Hello Ahana,\n\n')}>{EMAIL}</a>
+            <p>A reply within a day</p>
+          </div>
         </div>
         <p className="foot-name" aria-label="Ahana Mehra">
-          {'Ahana Mehra'.split('').map((c, i) => <span className="fm" key={i} aria-hidden="true"><span className="fl">{c === ' ' ? ' ' : c}</span></span>)}
+          {['Ahana', 'Mehra'].flatMap((w, i) => [i ? ' ' : null, <span className="fm" key={w} aria-hidden="true"><span className="fl">{w}</span></span>])}
         </p>
         <div className="foot-meta">
-          <nav aria-label="Footer"><a href="#about">About</a><a href="#offers">Classes</a><a href="#retreat">Retreat</a><a href="#questions">Questions</a></nav>
-          <p>Photographs from Unsplash: Sukha Yogashala, Kaylee Garrett, Look Studio, The Anam, Dinuka Lankaloka, Patrick Malleret, Junseong Lee, Woody Kelly, Margaret Young, Kateryna Ivanova, Brooke Lark, Kira Severinova, Look Studio, Cansu Hangül, Abiwin Krisna.</p>
-          <p>A concept website. Ahana Mehra is fictional; prices, dates and schedule are samples.</p>
+          <p>© 2027 Ahana Mehra</p>
+          <p>One slow breath at a time</p>
+          <a href="#top" className="to-top">Back to the top <span aria-hidden="true" /></a>
         </div>
       </footer>
     </>
